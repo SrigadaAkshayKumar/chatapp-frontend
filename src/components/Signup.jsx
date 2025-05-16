@@ -11,8 +11,14 @@ const Signup = () => {
     email: "",
     password: "",
   });
+  const [popup, setPopup] = useState({ message: "", type: "" });
   const { setUser } = useContext(UserContext);
   const navigate = useNavigate();
+
+  const showPopup = (message, type = "info") => {
+    setPopup({ message, type });
+    setTimeout(() => setPopup({ message: "", type: "" }), 3000);
+  };
 
   const changeHandler = (e) => {
     setData({ ...data, [e.target.name]: e.target.value });
@@ -21,29 +27,33 @@ const Signup = () => {
   const submitHandler = async (e) => {
     e.preventDefault();
 
-    const userIdRef = ref(realtimeDb, `Authentication/${data.userId}`);
-    const snapshot = await get(userIdRef);
+    try {
+      const userIdRef = ref(realtimeDb, `Authentication/${data.userId}`);
+      const snapshot = await get(userIdRef);
 
-    if (snapshot.exists()) {
-      alert("User ID already exists. Please choose a different one.");
-      return;
+      if (snapshot.exists()) {
+        showPopup(
+          "User ID already exists. Please choose a different one.",
+          "error"
+        );
+        return;
+      }
+
+      await set(userIdRef, data);
+      showPopup("Registration successful!", "success");
+      setUser(data);
+      setTimeout(() => navigate("/chat"), 1500);
+    } catch (err) {
+      console.error(err);
+      showPopup("Error during registration. Please try again.", "error");
     }
-
-    set(userIdRef, data)
-      .then(() => {
-        alert("Registration successful!");
-        // Set all user details in context
-        setUser(data);
-        navigate("/chat"); // Redirect to chat after successful signup
-      })
-      .catch((err) => {
-        console.error(err);
-        alert("Error during registration. Please try again.");
-      });
   };
 
   return (
     <div className="signup-container">
+      {popup.message && (
+        <div className={`popup ${popup.type}`}>{popup.message}</div>
+      )}
       <div className="signup-box">
         <div className="signup-form">
           <h1 className="signup-title">Enter Your Details</h1>
@@ -102,7 +112,7 @@ const Signup = () => {
             </button>
           </p>
           <p className="signup-login-link">
-            Learn How to use CipherThread?
+            Learn How to use CipherThread?{" "}
             <button
               className="login-navigation-button"
               onClick={() => navigate("/Use")}

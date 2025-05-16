@@ -7,8 +7,14 @@ import { UserContext } from "./UserContext";
 const Login = () => {
   const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
+  const [popup, setPopup] = useState({ message: "", type: "" });
   const { setUser } = useContext(UserContext);
   const navigate = useNavigate();
+
+  const showPopup = (message, type = "info") => {
+    setPopup({ message, type });
+    setTimeout(() => setPopup({ message: "", type: "" }), 3000);
+  };
 
   const handleLogin = async () => {
     try {
@@ -18,24 +24,31 @@ const Login = () => {
       if (snapshot.exists()) {
         const userData = snapshot.val();
         if (userData.password === password) {
-          alert("Logged in successfully!");
-          // Store user data in sessionStorage
-          sessionStorage.setItem("user", JSON.stringify(userData)); // Temporary session storage
-          setUser(userData); // Set user data in context
-          navigate("/chat");
+          showPopup("Logged in successfully!", "success");
+
+          // Store in context and localStorage for persistence
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+
+          // Redirect to chat after short delay
+          setTimeout(() => navigate("/chat"), 1500);
         } else {
-          alert("Incorrect password.");
+          showPopup("Incorrect password.", "error");
         }
       } else {
-        alert("User ID not found.");
+        showPopup("User ID not found.", "error");
       }
     } catch (error) {
-      alert("Login error. Try again.");
+      console.error("Login error:", error);
+      showPopup("Login error. Try again.", "error");
     }
   };
 
   return (
     <div className="login-container">
+      {popup.message && (
+        <div className={`popup ${popup.type}`}>{popup.message}</div>
+      )}
       <h1 className="login-title">Login</h1>
       <input
         className="login-input"
@@ -64,7 +77,7 @@ const Login = () => {
         </button>
       </p>
       <p className="signup-login-link">
-        Learn How to use CipherThread?
+        Learn How to use CipherThread?{" "}
         <button
           className="login-navigation-button"
           onClick={() => navigate("/Use")}

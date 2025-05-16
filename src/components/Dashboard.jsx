@@ -52,17 +52,36 @@ const Dashboard = () => {
         <div className="dashboard-detail">
           <strong>Password:</strong> {userData.password || "N/A"}
         </div>
-        <button className="chat-button" onClick={handleChatBackupRequest}>
-          Request Chat Backup
-        </button>
+        <div
+          className="flex"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "20px",
+            marginTop: "20px",
+          }}
+        >
+          <button
+            className="chat-button logout-button"
+            onClick={() => {
+              localStorage.removeItem("user"); // Clear login info
+              window.location.href = "/"; // Redirect to login
+            }}
+          >
+            Logout
+          </button>
+          <button className="chat-button" onClick={handleChatBackupRequest}>
+            Request Chat Backup
+          </button>
+        </div>
         <div className="chat-backup-section">
           {showBackupMessage && (
             <div className="chat-backup-message">
               <p>
                 Chat Backup Request:
                 <br />
-                Please email us at <strong>support@example.com</strong> with the
-                following details:
+                Please email us at <strong>wind090504@gmail.com</strong> with
+                the following details:
               </p>
               <ul>
                 <li>

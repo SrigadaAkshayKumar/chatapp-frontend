@@ -11,15 +11,19 @@ const Chat = () => {
   const { user } = useContext(UserContext);
   const [recipientId, setRecipientId] = useState("");
   const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState("direct"); // "direct" or "encrypted"
+  const [messageType, setMessageType] = useState("direct");
   const [chats, setChats] = useState({});
   const [activeChats, setActiveChats] = useState({});
   const [error, setError] = useState("");
   const [decryptPasskeys, setDecryptPasskeys] = useState({});
   const [unreadMessages, setUnreadMessages] = useState({});
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !user.userId) {
+      setError("You must be logged in to use the chat.");
+      return;
+    }
 
     socket.emit("register", { userId: user.userId });
 
@@ -38,25 +42,21 @@ const Chat = () => {
             decryptedMessage:
               data.messageType === "direct" ? data.encryptedMessage : null,
             isDecrypted: data.messageType === "direct",
-            sentTime: data.sentTime, // Use the sentTime from sender
+            sentTime: data.sentTime,
           },
         ],
       }));
     };
 
-    // Set up socket listeners
     socket.on("receiveMessage", handleReceiveMessage);
-
-    // Load unseen messages on login
     socket.emit("loadUnseenMessages", { userId: user.userId });
     socket.on("loadUnseenMessages", (unseenMessages) => {
-      setUnreadMessages(unseenMessages); // Assume sentTime is already formatted
+      setUnreadMessages(unseenMessages);
     });
 
-    // Cleanup function
     return () => {
-      socket.off("loadUnseenMessages");
       socket.off("receiveMessage", handleReceiveMessage);
+      socket.off("loadUnseenMessages");
     };
   }, [user]);
 
@@ -73,7 +73,6 @@ const Chat = () => {
       delete updated[chatKey];
       return updated;
     });
-
     socket.emit("markMessagesAsSeen", { userId: user.userId, chatKey });
   };
 
@@ -124,11 +123,16 @@ const Chat = () => {
     ) {
       setError("Incorrect passkey. Try again.");
     } else {
-      setError(""); // Clear any previous error if decryption succeeds
+      setError("");
     }
   };
 
   const handleSendMessage = async () => {
+    if (!user || !user.userId) {
+      setError("Please login to send a message.");
+      return;
+    }
+
     if (!recipientId || !message) {
       setError("Recipient ID and message are required.");
       return;
@@ -148,7 +152,7 @@ const Chat = () => {
           ? `${user.userId}-${recipientId}`
           : `${recipientId}-${user.userId}`;
 
-      const sentTime = new Date().toISOString(); // Capture the current time
+      const sentTime = new Date().toISOString();
       const encryptedMessage =
         messageType === "encrypted"
           ? CryptoJS.AES.encrypt(
@@ -162,7 +166,7 @@ const Chat = () => {
         recipientId,
         encryptedMessage,
         messageType,
-        sentTime, // Include the sent time
+        sentTime,
       });
 
       setChats((prev) => ({
@@ -174,12 +178,12 @@ const Chat = () => {
             decryptedMessage: message,
             isDecrypted: true,
             messageType,
-            sentTime, // Add sent time to local chat state
+            sentTime,
           },
         ],
       }));
       setMessage("");
-      setError(""); // Clear any previous error
+      setError("");
     } catch (error) {
       setError("Error checking recipient ID. Please try again.");
     }
@@ -192,13 +196,11 @@ const Chat = () => {
     }));
   };
 
-  // Load chats from local storage on mount
   useEffect(() => {
     const savedChats = JSON.parse(localStorage.getItem("chats") || "{}");
     setChats(savedChats);
   }, []);
 
-  // Save chats to local storage whenever they are updated
   useEffect(() => {
     if (chats && Object.keys(chats).length > 0) {
       localStorage.setItem("chats", JSON.stringify(chats));
@@ -208,33 +210,25 @@ const Chat = () => {
   const deleteChatMessage = (chatKey, index) => {
     setChats((prevChats) => {
       const updatedChats = { ...prevChats };
-      updatedChats[chatKey].splice(index, 1); // Remove the specific chat message
+      updatedChats[chatKey].splice(index, 1);
       if (updatedChats[chatKey].length === 0) {
-        delete updatedChats[chatKey]; // Remove chatKey if no messages remain
+        delete updatedChats[chatKey];
       }
-      localStorage.setItem("chats", JSON.stringify(updatedChats)); // Update local storage
+      localStorage.setItem("chats", JSON.stringify(updatedChats));
       return updatedChats;
     });
   };
-  const [showScrollButton, setShowScrollButton] = useState(false);
+
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY > 200) {
-        setShowScrollButton(true);
-      } else {
-        setShowScrollButton(false);
-      }
+      setShowScrollButton(window.scrollY > 200);
     };
-
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -288,7 +282,7 @@ const Chat = () => {
             {unreadMessages[chatKey].map((msg, idx) => (
               <div key={idx} className="chat-message">
                 <strong className="chat-message-sender">
-                  {msg.senderId === user.userId ? "You" : msg.senderId}:
+                  {msg.senderId === user?.userId ? "You" : msg.senderId}:
                 </strong>
                 <div className="chat-message-time">
                   {new Date(msg.sentTime).toLocaleString()}
@@ -308,9 +302,8 @@ const Chat = () => {
         {Object.keys(chats).map((chatKey) => (
           <div key={chatKey} className="chat-section">
             <div className="chat-section1" onClick={() => toggleChat(chatKey)}>
-              <h3 className="chat-with clickable">Chat with {chatKey} </h3>
+              <h3 className="chat-with clickable">Chat with {chatKey}</h3>
               <span>
-                {" "}
                 <FontAwesomeIcon icon={faBell} className="header-logo-icon" />
               </span>
             </div>
@@ -319,7 +312,7 @@ const Chat = () => {
                 {chats[chatKey].map((msg, idx) => (
                   <div key={idx} className="chat-message">
                     <strong className="chat-message-sender">
-                      {msg.senderId === user.userId ? "You" : msg.senderId}:
+                      {msg.senderId === user?.userId ? "You" : msg.senderId}:
                     </strong>
                     <div className="chat-flex">
                       <div>
@@ -339,7 +332,7 @@ const Chat = () => {
                         </button>
                       </div>
                     </div>
-                    {msg.senderId !== user.userId &&
+                    {msg.senderId !== user?.userId &&
                       msg.messageType === "encrypted" &&
                       !msg.isDecrypted && (
                         <div className="chat-decrypt-section">

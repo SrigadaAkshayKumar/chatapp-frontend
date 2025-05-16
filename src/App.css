@@ -9,6 +9,51 @@
   flex-direction: column;
 }
 
+/* Popup css */
+
+.popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  color: #fff;
+  z-index: 1000;
+  animation: slideDown 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.popup.success {
+  background-color: #4caf50;
+}
+
+.popup.error {
+  background-color: #f44336;
+}
+
+.popup.info {
+  background-color: #2196f3;
+}
+
+@keyframes slideDown {
+  from {
+    top: 0;
+    opacity: 0;
+  }
+  to {
+    top: 20px;
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
 /* header.css */
 
 .header {
